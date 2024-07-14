@@ -1,0 +1,66 @@
+package main
+
+import (
+	"fmt"
+	"net/http"
+)
+
+type ServerStatus struct {
+	Address  string
+	UpStatus bool
+}
+
+func createFull_addrs(addrs []string, ports map[int][]string) []ServerStatus {
+	serverStatus := make([]ServerStatus, 0)
+	for i, addr := range addrs {
+		for _, port := range ports[i] {
+			serverStatus = append(serverStatus,
+				ServerStatus{
+					Address:  addr + ":" + port,
+					UpStatus: false,
+				})
+		}
+	}
+	return serverStatus
+}
+
+func robinRound(rw http.ResponseWriter, r *http.Request, serverStatus []ServerStatus) {
+	b := make([]byte, 1000)
+	var n int
+	var err error
+	for _, v := range serverStatus {
+		res, err := http.Get(v.Address + r.URL.Path)
+		for n > 0 {
+			n, err = res.Body.Read(b)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			rw.Write(b[:n])
+		}
+		if err != nil {
+			fmt.Println("err : ", err)
+			return
+		}
+		if res.StatusCode >= 500 {
+			fmt.Println("res : ", res)
+			return
+		}
+		return
+	}
+}
+
+func main() {
+	addrs := []string{
+		"http://localhost",
+	}
+	ports := map[int][]string{
+		0: []string{"8081", "8082", "8083"},
+	}
+	addrs_status := createFull_addrs(addrs, ports)
+	http.HandleFunc("/",
+		func(rw http.ResponseWriter, r *http.Request) {
+			robinRound(rw, r, addrs_status)
+		})
+	http.ListenAndServe(":8080", nil)
+}

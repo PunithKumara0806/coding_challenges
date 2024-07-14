@@ -43,6 +43,9 @@
 *.idb
 *.pdb
 
+#rust builds
+**/target/*
+
 # Kernel Module Compile Results
 *.mod*
 *.cmd
